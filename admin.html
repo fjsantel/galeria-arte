@@ -94,6 +94,46 @@
         </div>
     </div>
 
+    <!-- MODAL DE EDICIÓN -->
+    <div class="modal-overlay" id="edit-modal-overlay">
+        <div class="modal-content">
+            <h2>Editar Obra</h2>
+            <form id="edit-artwork-form">
+                <input type="hidden" id="edit-id">
+
+                <div class="form-group">
+                    <label for="edit-titulo">Título</label>
+                    <input type="text" id="edit-titulo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-artista">Artista</label>
+                    <input type="text" id="edit-artista" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-anio">Año</label>
+                    <input type="number" id="edit-anio" min="1900" max="2100" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tecnica">Técnica</label>
+                    <input type="text" id="edit-tecnica" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-precio">Precio (CLP)</label>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="edit-precio" required>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="submit-btn">GUARDAR CAMBIOS</button>
+                    <button type="button" class="submit-btn" onclick="closeEditModal()" style="background-color: #999;">CANCELAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="config.js"></script>
     <script>
@@ -294,6 +334,9 @@
                                     <td>$${formatPrice(obra.precio)}</td>
                                     <td>${obra.disponible ? '✓ Disponible' : '✕ Vendida'}</td>
                                     <td>
+                                        <button class="table-btn" onclick="editObra('${obra.id}')">
+                                            Editar
+                                        </button>
                                         <button class="table-btn ${obra.disponible ? '' : 'sold'}"
                                                 onclick="toggleDisponibilidad('${obra.id}', ${!obra.disponible})">
                                             ${obra.disponible ? 'Marcar Vendida' : 'Marcar Disponible'}
@@ -313,6 +356,94 @@
                 container.innerHTML = '<p style="color: red;">Error al cargar las obras.</p>';
             }
         }
+
+        // EDITAR OBRA
+        async function editObra(id) {
+            try {
+                // Obtener datos de la obra
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${id}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar la obra');
+                }
+
+                const [obra] = await response.json();
+
+                if (!obra) {
+                    alert('Obra no encontrada');
+                    return;
+                }
+
+                // Llenar formulario de edición
+                document.getElementById('edit-id').value = obra.id;
+                document.getElementById('edit-titulo').value = obra.titulo;
+                document.getElementById('edit-artista').value = obra.artista;
+                document.getElementById('edit-anio').value = obra.anio;
+                document.getElementById('edit-tecnica').value = obra.tecnica;
+                document.getElementById('edit-precio').value = obra.precio;
+
+                // Mostrar modal
+                document.getElementById('edit-modal-overlay').classList.add('active');
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar los datos de la obra');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal-overlay').classList.remove('active');
+        }
+
+        // Guardar cambios de edición
+        document.getElementById('edit-artwork-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = e.target.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'GUARDANDO...';
+
+            try {
+                const id = document.getElementById('edit-id').value;
+                const obraActualizada = {
+                    titulo: document.getElementById('edit-titulo').value,
+                    artista: document.getElementById('edit-artista').value,
+                    anio: parseInt(document.getElementById('edit-anio').value),
+                    tecnica: document.getElementById('edit-tecnica').value,
+                    precio: parseFloat(document.getElementById('edit-precio').value)
+                };
+
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(obraActualizada)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al actualizar la obra');
+                }
+
+                alert('Obra actualizada exitosamente');
+                closeEditModal();
+                loadObras();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la obra: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'GUARDAR CAMBIOS';
+            }
+        });
 
         // CAMBIAR DISPONIBILIDAD
         async function toggleDisponibilidad(id, disponible) {
