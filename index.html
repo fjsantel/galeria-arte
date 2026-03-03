@@ -3,69 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galería de Arte | Colección Exclusiva</title>
+    <title>Galería de Arte Contemporáneo</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- NAVBAR -->
     <nav class="navbar">
         <a href="index.html" class="navbar-logo">GALERÍA</a>
-        <ul class="navbar-menu">
-            <li><a href="#obras">OBRAS</a></li>
-            <li><a href="#artistas">ARTISTAS</a></li>
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+        <ul class="navbar-menu" id="navbar-menu">
+            <button class="mobile-menu-close" id="mobile-menu-close">✕</button>
+            <li><a href="obras.html">OBRAS</a></li>
+            <li><a href="#galeria">GALERÍA</a></li>
             <li><a href="#contacto">CONTACTO</a></li>
-            <li><a href="admin.html">ADMIN</a></li>
         </ul>
-        <button class="cart-btn" id="cart-btn">
-            CARRITO
-            <span class="cart-count" id="cart-count">0</span>
-        </button>
+        <a href="obras.html" class="cart-btn">
+            VER CATÁLOGO
+        </a>
     </nav>
+    <div class="menu-overlay" id="menu-overlay"></div>
 
-    <!-- MAIN CONTENT -->
-    <main class="container">
-        <h1 class="page-title">Colección Exclusiva</h1>
-        <p class="page-subtitle">Obras únicas de artistas contemporáneos</p>
-
-        <div class="loading" id="loading">Cargando obras...</div>
-        <div class="gallery" id="gallery"></div>
-    </main>
-
-    <!-- CART SIDEBAR -->
-    <div class="cart-sidebar" id="cart-sidebar">
-        <div class="cart-header">
-            <h2>Tu Carrito</h2>
-            <button class="close-cart-btn" id="close-cart-btn">✕</button>
-        </div>
-
-        <div class="empty-cart" id="empty-cart">
-            <p>Tu carrito está vacío</p>
-        </div>
-
-        <div class="cart-items" id="cart-items-container"></div>
-
-        <div class="cart-footer">
-            <div class="cart-total">
-                <span class="cart-total-label">Total</span>
-                <span class="cart-total-amount" id="cart-total">$0</span>
+    <!-- HERO CAROUSEL -->
+    <section class="hero-carousel">
+        <div class="carousel-container">
+            <div class="carousel-track" id="carousel-track">
+                <!-- Las imágenes se cargarán dinámicamente -->
             </div>
-            <button class="checkout-btn" id="checkout-btn">PROCEDER AL PAGO</button>
+            <button class="carousel-btn prev" id="prev-btn">‹</button>
+            <button class="carousel-btn next" id="next-btn">›</button>
         </div>
-    </div>
+        <div class="carousel-dots" id="carousel-dots"></div>
+    </section>
 
-    <div class="cart-overlay" id="cart-overlay"></div>
+    <!-- ABOUT SECTION -->
+    <section class="about-section" id="galeria">
+        <div class="about-container">
+            <h1 class="about-title">Bienvenidos a Nuestra Galería</h1>
+            <div class="about-content">
+                <div class="about-block">
+                    <h2>Nuestra Historia</h2>
+                    <p>Desde 1985, nos hemos dedicado a promover y exhibir lo mejor del arte contemporáneo latinoamericano. Nuestra galería se ha convertido en un espacio de encuentro entre artistas emergentes y consolidados, coleccionistas exigentes y amantes del arte que buscan piezas únicas y significativas.</p>
+                </div>
+
+                <div class="about-block">
+                    <h2>Nuestra Misión</h2>
+                    <p>Creemos en el poder transformador del arte. Nuestra misión es crear puentes entre creadores y público, ofreciendo una curaduría cuidadosa que refleje las corrientes artísticas más relevantes de nuestro tiempo. Cada obra que presentamos ha sido seleccionada por su valor estético, su propuesta conceptual y su capacidad para dialogar con el espectador.</p>
+                </div>
+
+                <div class="about-block">
+                    <h2>Colección Exclusiva</h2>
+                    <p>Trabajamos directamente con artistas de Chile, Argentina, Brasil, Colombia y México, representando tanto a maestros consagrados como a nuevas voces que están redefiniendo el panorama artístico contemporáneo. Nuestro catálogo abarca pintura, escultura, fotografía y técnicas mixtas, con piezas que van desde obras intimistas hasta instalaciones de gran formato.</p>
+                </div>
+
+                <div class="about-block">
+                    <h2>Servicios Personalizados</h2>
+                    <p>Ofrecemos asesoría especializada para coleccionistas, empresas e instituciones. Nuestro equipo de expertos está disponible para guiarle en la selección de obras, ya sea que esté iniciando su colección o buscando piezas específicas para complementar un acervo existente. También brindamos servicios de valoración, autenticación y montaje profesional.</p>
+                </div>
+
+                <div class="about-block" id="artistas">
+                    <h2>Artistas Representados</h2>
+                    <p>Contamos con una selección de artistas que han expuesto en bienales internacionales, museos y galerías de prestigio. Entre ellos destacan pintores abstractos, realistas contemporáneos, fotógrafos documentales y artistas multidisciplinarios que experimentan con nuevas formas de expresión visual.</p>
+                </div>
+
+                <div class="about-block" id="contacto">
+                    <h2>Visítanos</h2>
+                    <p>Nuestra galería está abierta de martes a sábado, de 11:00 a 19:00 horas. Te invitamos a visitarnos para experimentar las obras en persona, donde podrás apreciar los detalles, texturas y dimensiones que hacen única cada creación. También organizamos inauguraciones y eventos especiales con los artistas.</p>
+                    <p><strong>Contacto:</strong> info@galeria.cl | +56 9 xxxx xxxx</p>
+                </div>
+            </div>
+
+            <a href="obras.html" class="cta-button">EXPLORAR COLECCIÓN</a>
+        </div>
+    </section>
 
     <!-- SCRIPTS -->
     <script src="config.js"></script>
-    <script src="cart.js"></script>
     <script>
-        // GALERÍA - CARGAR OBRAS DESDE SUPABASE
-        async function loadArtworks() {
-            const loading = document.getElementById('loading');
-            const gallery = document.getElementById('gallery');
+        // CAROUSEL
+        let currentSlide = 0;
+        let carouselImages = [];
+        let autoplayInterval;
 
+        async function loadCarouselImages() {
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?select=*&order=created_at.desc`, {
+                // Cargar obras destacadas desde Supabase
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?select=imagen_url,titulo,artista&limit=6&order=created_at.desc`, {
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -73,84 +95,135 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Error al cargar las obras');
+                    throw new Error('Error al cargar imágenes');
                 }
 
                 const obras = await response.json();
-
-                loading.style.display = 'none';
 
                 if (obras.length === 0) {
-                    gallery.innerHTML = '<p style="text-align: center; color: #999;">No hay obras disponibles en este momento.</p>';
-                    return;
+                    // Imágenes de placeholder si no hay obras
+                    carouselImages = [
+                        { url: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=1200', title: 'Arte Contemporáneo', artista: 'Galería' },
+                        { url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=1200', title: 'Exposición Permanente', artista: 'Galería' },
+                        { url: 'https://images.unsplash.com/photo-1577083165633-14ebcdb0f658?w=1200', title: 'Colección Exclusiva', artista: 'Galería' }
+                    ];
+                } else {
+                    carouselImages = obras.map(obra => ({
+                        url: obra.imagen_url,
+                        title: obra.titulo,
+                        artista: obra.artista
+                    }));
                 }
 
-                gallery.innerHTML = obras.map(obra => `
-                    <div class="artwork-card ${!obra.disponible ? 'sold' : ''}">
-                        ${!obra.disponible ? '<div class="sold-badge">VENDIDA</div>' : ''}
-                        <img src="${obra.imagen_url}" alt="${obra.titulo}" class="artwork-image">
-                        <div class="artwork-info">
-                            <h3 class="artwork-title">${obra.titulo}</h3>
-                            <p class="artwork-artist">${obra.artista}</p>
-                            <p class="artwork-year">${obra.anio} • ${obra.tecnica || 'Técnica mixta'}</p>
-                            <p class="artwork-price">$${formatPrice(obra.precio)}</p>
-                            ${obra.disponible
-                                ? `<button class="add-to-cart-btn" onclick="addToCart('${obra.id}')">AGREGAR AL CARRITO</button>`
-                                : `<button class="add-to-cart-btn" disabled>NO DISPONIBLE</button>`
-                            }
-                        </div>
+                renderCarousel();
+                startAutoplay();
+            } catch (error) {
+                console.error('Error:', error);
+                // Usar imágenes de placeholder en caso de error
+                carouselImages = [
+                    { url: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=1200', title: 'Arte Contemporáneo', artista: 'Galería' },
+                    { url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=1200', title: 'Exposición Permanente', artista: 'Galería' },
+                    { url: 'https://images.unsplash.com/photo-1577083165633-14ebcdb0f658?w=1200', title: 'Colección Exclusiva', artista: 'Galería' }
+                ];
+                renderCarousel();
+                startAutoplay();
+            }
+        }
+
+        function renderCarousel() {
+            const track = document.getElementById('carousel-track');
+            const dots = document.getElementById('carousel-dots');
+
+            track.innerHTML = carouselImages.map((img, index) => `
+                <div class="carousel-slide ${index === 0 ? 'active' : ''}">
+                    <img src="${img.url}" alt="${img.title}">
+                    <div class="carousel-caption">
+                        <h2>${img.title}</h2>
+                        <p>${img.artista}</p>
                     </div>
-                `).join('');
+                </div>
+            `).join('');
 
-            } catch (error) {
-                console.error('Error:', error);
-                loading.innerHTML = 'Error al cargar las obras. Por favor, verifica tu conexión.';
-            }
+            dots.innerHTML = carouselImages.map((_, index) => `
+                <span class="dot ${index === 0 ? 'active' : ''}" onclick="goToSlide(${index})"></span>
+            `).join('');
         }
 
-        function formatPrice(price) {
-            return parseFloat(price).toLocaleString('es-CL', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            });
+        function goToSlide(n) {
+            const slides = document.querySelectorAll('.carousel-slide');
+            const dots = document.querySelectorAll('.dot');
+
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.remove('active');
+
+            currentSlide = n;
+            if (currentSlide >= slides.length) currentSlide = 0;
+            if (currentSlide < 0) currentSlide = slides.length - 1;
+
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+
+            // Reiniciar autoplay
+            clearInterval(autoplayInterval);
+            startAutoplay();
         }
 
-        async function addToCart(obraId) {
-            try {
-                // Obtener datos de la obra
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${obraId}&select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
-                });
-
-                const obras = await response.json();
-                const obra = obras[0];
-
-                if (!obra) {
-                    alert('Obra no encontrada');
-                    return;
-                }
-
-                if (!obra.disponible) {
-                    alert('Esta obra ya no está disponible');
-                    return;
-                }
-
-                cart.addItem(obra);
-                cart.openCart();
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al agregar la obra al carrito');
-            }
+        function nextSlide() {
+            goToSlide(currentSlide + 1);
         }
 
-        // Cargar obras al iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            loadArtworks();
+        function prevSlide() {
+            goToSlide(currentSlide - 1);
+        }
+
+        function startAutoplay() {
+            autoplayInterval = setInterval(() => {
+                nextSlide();
+            }, 5000); // Cambiar cada 5 segundos
+        }
+
+        // Event listeners
+        document.getElementById('prev-btn').addEventListener('click', prevSlide);
+        document.getElementById('next-btn').addEventListener('click', nextSlide);
+
+        // Mobile menu
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileMenuClose = document.getElementById('mobile-menu-close');
+        const navbarMenu = document.getElementById('navbar-menu');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+        function openMobileMenu() {
+            navbarMenu.classList.add('active');
+            menuOverlay.classList.add('active');
+        }
+
+        function closeMobileMenu() {
+            navbarMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        mobileMenuToggle.addEventListener('click', openMobileMenu);
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+        menuOverlay.addEventListener('click', closeMobileMenu);
+
+        // Cerrar menú al hacer click en un link
+        document.querySelectorAll('.navbar-menu a').forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
         });
+
+        // Smooth scroll para los links internos
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Cargar carousel al inicio
+        document.addEventListener('DOMContentLoaded', loadCarouselImages);
     </script>
 </body>
 </html>

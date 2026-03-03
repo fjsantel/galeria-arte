@@ -7,6 +7,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">GALERÍA</a>
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+        <ul class="navbar-menu" id="navbar-menu">
+            <button class="mobile-menu-close" id="mobile-menu-close">✕</button>
+            <li><a href="obras.html">OBRAS</a></li>
+            <li><a href="index.html#galeria">GALERÍA</a></li>
+            <li><a href="index.html#contacto">CONTACTO</a></li>
+        </ul>
+        <a href="admin.html" class="cart-btn" style="text-decoration: none;">
+            ADMIN
+        </a>
+    </nav>
+    <div class="menu-overlay" id="menu-overlay"></div>
+
     <!-- LOGIN -->
     <div class="login-container" id="login-container">
         <h1>Administración</h1>
@@ -53,8 +69,11 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="imagen">Imagen</label>
-                    <input type="file" id="imagen" accept="image/*" required>
+                    <label for="imagenes">Imágenes (puedes seleccionar múltiples)</label>
+                    <input type="file" id="imagenes" accept="image/*" multiple required>
+                    <small style="color: #666; display: block; margin-top: 0.5rem;">
+                        La primera imagen será la principal. Puedes seleccionar hasta 10 imágenes.
+                    </small>
                 </div>
 
                 <div class="form-group">
@@ -147,18 +166,36 @@
             submitBtn.textContent = 'SUBIENDO...';
 
             try {
-                // Subir imagen
-                const imageFile = document.getElementById('imagen').files[0];
-                const imageUrl = await uploadImage(imageFile);
+                const imageFiles = document.getElementById('imagenes').files;
 
-                // Crear obra en la base de datos
+                if (imageFiles.length === 0) {
+                    throw new Error('Debes seleccionar al menos una imagen');
+                }
+
+                if (imageFiles.length > 10) {
+                    throw new Error('Máximo 10 imágenes por obra');
+                }
+
+                // Subir todas las imágenes
+                submitBtn.textContent = `SUBIENDO IMÁGENES (0/${imageFiles.length})...`;
+                const imageUrls = [];
+
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const url = await uploadImage(imageFiles[i]);
+                    imageUrls.push(url);
+                    submitBtn.textContent = `SUBIENDO IMÁGENES (${i + 1}/${imageFiles.length})...`;
+                }
+
+                submitBtn.textContent = 'GUARDANDO OBRA...';
+
+                // Crear obra en la base de datos (usando la primera imagen como principal)
                 const obra = {
                     titulo: document.getElementById('titulo').value,
                     artista: document.getElementById('artista').value,
                     anio: parseInt(document.getElementById('anio').value),
                     tecnica: document.getElementById('tecnica').value,
                     precio: parseFloat(document.getElementById('precio').value),
-                    imagen_url: imageUrl,
+                    imagen_url: imageUrls[0], // Primera imagen como principal
                     disponible: document.getElementById('disponible').checked
                 };
 
@@ -177,7 +214,27 @@
                     throw new Error('Error al guardar la obra');
                 }
 
-                alert('Obra agregada exitosamente');
+                const [obraCreada] = await response.json();
+
+                // Guardar todas las imágenes en la tabla obra_imagenes
+                for (let i = 0; i < imageUrls.length; i++) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/obra_imagenes`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            obra_id: obraCreada.id,
+                            imagen_url: imageUrls[i],
+                            orden: i,
+                            es_principal: i === 0
+                        })
+                    });
+                }
+
+                alert('Obra agregada exitosamente con ' + imageUrls.length + ' imagen(es)');
                 e.target.reset();
                 loadObras();
 
@@ -314,6 +371,31 @@
                 maximumFractionDigits: 0
             });
         }
+
+        // Mobile menu
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileMenuClose = document.getElementById('mobile-menu-close');
+        const navbarMenu = document.getElementById('navbar-menu');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+        function openMobileMenu() {
+            navbarMenu.classList.add('active');
+            menuOverlay.classList.add('active');
+        }
+
+        function closeMobileMenu() {
+            navbarMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        mobileMenuToggle.addEventListener('click', openMobileMenu);
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+        menuOverlay.addEventListener('click', closeMobileMenu);
+
+        // Cerrar menú al hacer click en un link
+        document.querySelectorAll('.navbar-menu a').forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
+        });
 
         // Verificar autenticación al cargar
         checkAuth();

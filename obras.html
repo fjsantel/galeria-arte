@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Arte | Colección Exclusiva</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">GALERÍA</a>
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+        <ul class="navbar-menu" id="navbar-menu">
+            <button class="mobile-menu-close" id="mobile-menu-close">✕</button>
+            <li><a href="obras.html">OBRAS</a></li>
+            <li><a href="index.html#galeria">GALERÍA</a></li>
+            <li><a href="index.html#contacto">CONTACTO</a></li>
+        </ul>
+        <button class="cart-btn" id="cart-btn">
+            CARRITO
+            <span class="cart-count" id="cart-count">0</span>
+        </button>
+    </nav>
+    <div class="menu-overlay" id="menu-overlay"></div>
+
+    <!-- MAIN CONTENT -->
+    <main class="container">
+        <h1 class="page-title">Colección Exclusiva</h1>
+        <p class="page-subtitle">Obras únicas de artistas contemporáneos</p>
+
+        <div class="loading" id="loading">Cargando obras...</div>
+        <div id="gallery"></div>
+    </main>
+
+    <!-- LIGHTBOX -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+            <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">‹</button>
+            <img class="lightbox-image" id="lightbox-image" src="" alt="">
+            <button class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">›</button>
+            <div class="lightbox-info">
+                <p class="lightbox-counter" id="lightbox-counter"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CART SIDEBAR -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h2>Tu Carrito</h2>
+            <button class="close-cart-btn" id="close-cart-btn">✕</button>
+        </div>
+
+        <div class="empty-cart" id="empty-cart">
+            <p>Tu carrito está vacío</p>
+        </div>
+
+        <div class="cart-items" id="cart-items-container"></div>
+
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span class="cart-total-label">Total</span>
+                <span class="cart-total-amount" id="cart-total">$0</span>
+            </div>
+            <button class="checkout-btn" id="checkout-btn">PROCEDER AL PAGO</button>
+        </div>
+    </div>
+
+    <div class="cart-overlay" id="cart-overlay"></div>
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script src="cart.js"></script>
+    <script>
+        let allImages = {}; // Almacenar todas las imágenes por obra
+        let currentLightboxImages = [];
+        let currentLightboxIndex = 0;
+
+        // GALERÍA - CARGAR OBRAS DESDE SUPABASE AGRUPADAS POR ARTISTA
+        async function loadArtworks() {
+            const loading = document.getElementById('loading');
+            const gallery = document.getElementById('gallery');
+
+            try {
+                // Cargar obras
+                const obrasResponse = await fetch(`${SUPABASE_URL}/rest/v1/obras?select=*&order=artista.asc,created_at.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!obrasResponse.ok) {
+                    throw new Error('Error al cargar las obras');
+                }
+
+                const obras = await obrasResponse.json();
+
+                // Cargar todas las imágenes
+                const imagenesResponse = await fetch(`${SUPABASE_URL}/rest/v1/obra_imagenes?select=*&order=orden.asc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (imagenesResponse.ok) {
+                    const imagenes = await imagenesResponse.json();
+
+                    // Agrupar imágenes por obra_id
+                    imagenes.forEach(img => {
+                        if (!allImages[img.obra_id]) {
+                            allImages[img.obra_id] = [];
+                        }
+                        allImages[img.obra_id].push(img.imagen_url);
+                    });
+                }
+
+                loading.style.display = 'none';
+
+                if (obras.length === 0) {
+                    gallery.innerHTML = '<p style="text-align: center; color: #999;">No hay obras disponibles en este momento.</p>';
+                    return;
+                }
+
+                // Agrupar obras por artista
+                const obrasPorArtista = obras.reduce((acc, obra) => {
+                    const artista = obra.artista || 'Sin artista';
+                    if (!acc[artista]) {
+                        acc[artista] = [];
+                    }
+                    acc[artista].push(obra);
+                    return acc;
+                }, {});
+
+                // Renderizar obras agrupadas por artista
+                gallery.innerHTML = Object.entries(obrasPorArtista).map(([artista, obrasArtista]) => `
+                    <div class="artist-section">
+                        <div class="artist-header">
+                            <h2 class="artist-name">${artista}</h2>
+                            <p class="artist-count">${obrasArtista.length} obra${obrasArtista.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <div class="gallery">
+                            ${obrasArtista.map(obra => {
+                                const imagenes = allImages[obra.id] || [obra.imagen_url];
+                                const imagenesHtml = imagenes.length > 1
+                                    ? `<div class="artwork-thumbnails">
+                                        ${imagenes.slice(0, 5).map((img, idx) =>
+                                            `<img src="${img}" class="thumbnail" onclick="openLightbox('${obra.id}', ${idx})" alt="Vista ${idx + 1}">`
+                                        ).join('')}
+                                        ${imagenes.length > 5 ? `<span style="font-size: 0.85rem; color: #666;">+${imagenes.length - 5} más</span>` : ''}
+                                       </div>`
+                                    : '';
+
+                                return `
+                                    <div class="artwork-card ${!obra.disponible ? 'sold' : ''}">
+                                        ${!obra.disponible ? '<div class="sold-badge">VENDIDA</div>' : ''}
+                                        <img src="${imagenes[0]}" alt="${obra.titulo}" class="artwork-image" onclick="openLightbox('${obra.id}', 0)" style="cursor: pointer;">
+                                        <div class="artwork-info">
+                                            <h3 class="artwork-title">${obra.titulo}</h3>
+                                            <p class="artwork-artist">${obra.artista}</p>
+                                            <p class="artwork-year">${obra.anio} • ${obra.tecnica || 'Técnica mixta'}</p>
+                                            ${imagenesHtml}
+                                            <p class="artwork-price">$${formatPrice(obra.precio)}</p>
+                                            ${obra.disponible
+                                                ? `<button class="add-to-cart-btn" onclick="addToCart('${obra.id}')">AGREGAR AL CARRITO</button>`
+                                                : `<button class="add-to-cart-btn" disabled>NO DISPONIBLE</button>`
+                                            }
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error:', error);
+                loading.innerHTML = 'Error al cargar las obras. Por favor, verifica tu conexión.';
+            }
+        }
+
+        // LIGHTBOX
+        function openLightbox(obraId, imageIndex) {
+            const images = allImages[obraId];
+            if (!images || images.length === 0) return;
+
+            currentLightboxImages = images;
+            currentLightboxIndex = imageIndex;
+
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxCounter = document.getElementById('lightbox-counter');
+
+            lightboxImage.src = currentLightboxImages[currentLightboxIndex];
+            lightboxCounter.textContent = `${currentLightboxIndex + 1} / ${currentLightboxImages.length}`;
+
+            lightbox.classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        function navigateLightbox(direction) {
+            currentLightboxIndex += direction;
+
+            if (currentLightboxIndex < 0) {
+                currentLightboxIndex = currentLightboxImages.length - 1;
+            } else if (currentLightboxIndex >= currentLightboxImages.length) {
+                currentLightboxIndex = 0;
+            }
+
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxCounter = document.getElementById('lightbox-counter');
+
+            lightboxImage.src = currentLightboxImages[currentLightboxIndex];
+            lightboxCounter.textContent = `${currentLightboxIndex + 1} / ${currentLightboxImages.length}`;
+        }
+
+        // Cerrar lightbox con tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            } else if (e.key === 'ArrowLeft') {
+                navigateLightbox(-1);
+            } else if (e.key === 'ArrowRight') {
+                navigateLightbox(1);
+            }
+        });
+
+        // Cerrar lightbox al hacer click fuera de la imagen
+        document.getElementById('lightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'lightbox') {
+                closeLightbox();
+            }
+        });
+
+        function formatPrice(price) {
+            return parseFloat(price).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        async function addToCart(obraId) {
+            try {
+                // Obtener datos de la obra
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${obraId}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                const obras = await response.json();
+                const obra = obras[0];
+
+                if (!obra) {
+                    alert('Obra no encontrada');
+                    return;
+                }
+
+                if (!obra.disponible) {
+                    alert('Esta obra ya no está disponible');
+                    return;
+                }
+
+                cart.addItem(obra);
+                cart.openCart();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar la obra al carrito');
+            }
+        }
+
+        // Mobile menu
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileMenuClose = document.getElementById('mobile-menu-close');
+        const navbarMenu = document.getElementById('navbar-menu');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+        function openMobileMenu() {
+            navbarMenu.classList.add('active');
+            menuOverlay.classList.add('active');
+        }
+
+        function closeMobileMenu() {
+            navbarMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        mobileMenuToggle.addEventListener('click', openMobileMenu);
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+        menuOverlay.addEventListener('click', closeMobileMenu);
+
+        // Cerrar menú al hacer click en un link
+        document.querySelectorAll('.navbar-menu a').forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
+        });
+
+        // Cargar obras al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadArtworks();
+        });
+    </script>
+</body>
+</html>
