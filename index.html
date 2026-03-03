@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Arte | Colección Exclusiva</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">GALERÍA</a>
+        <ul class="navbar-menu">
+            <li><a href="#obras">OBRAS</a></li>
+            <li><a href="#artistas">ARTISTAS</a></li>
+            <li><a href="#contacto">CONTACTO</a></li>
+            <li><a href="admin.html">ADMIN</a></li>
+        </ul>
+        <button class="cart-btn" id="cart-btn">
+            CARRITO
+            <span class="cart-count" id="cart-count">0</span>
+        </button>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="container">
+        <h1 class="page-title">Colección Exclusiva</h1>
+        <p class="page-subtitle">Obras únicas de artistas contemporáneos</p>
+
+        <div class="loading" id="loading">Cargando obras...</div>
+        <div class="gallery" id="gallery"></div>
+    </main>
+
+    <!-- CART SIDEBAR -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h2>Tu Carrito</h2>
+            <button class="close-cart-btn" id="close-cart-btn">✕</button>
+        </div>
+
+        <div class="empty-cart" id="empty-cart">
+            <p>Tu carrito está vacío</p>
+        </div>
+
+        <div class="cart-items" id="cart-items-container"></div>
+
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span class="cart-total-label">Total</span>
+                <span class="cart-total-amount" id="cart-total">$0</span>
+            </div>
+            <button class="checkout-btn" id="checkout-btn">PROCEDER AL PAGO</button>
+        </div>
+    </div>
+
+    <div class="cart-overlay" id="cart-overlay"></div>
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script src="cart.js"></script>
+    <script>
+        // GALERÍA - CARGAR OBRAS DESDE SUPABASE
+        async function loadArtworks() {
+            const loading = document.getElementById('loading');
+            const gallery = document.getElementById('gallery');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?select=*&order=created_at.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar las obras');
+                }
+
+                const obras = await response.json();
+
+                loading.style.display = 'none';
+
+                if (obras.length === 0) {
+                    gallery.innerHTML = '<p style="text-align: center; color: #999;">No hay obras disponibles en este momento.</p>';
+                    return;
+                }
+
+                gallery.innerHTML = obras.map(obra => `
+                    <div class="artwork-card ${!obra.disponible ? 'sold' : ''}">
+                        ${!obra.disponible ? '<div class="sold-badge">VENDIDA</div>' : ''}
+                        <img src="${obra.imagen_url}" alt="${obra.titulo}" class="artwork-image">
+                        <div class="artwork-info">
+                            <h3 class="artwork-title">${obra.titulo}</h3>
+                            <p class="artwork-artist">${obra.artista}</p>
+                            <p class="artwork-year">${obra.anio} • ${obra.tecnica || 'Técnica mixta'}</p>
+                            <p class="artwork-price">$${formatPrice(obra.precio)}</p>
+                            ${obra.disponible
+                                ? `<button class="add-to-cart-btn" onclick="addToCart('${obra.id}')">AGREGAR AL CARRITO</button>`
+                                : `<button class="add-to-cart-btn" disabled>NO DISPONIBLE</button>`
+                            }
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error:', error);
+                loading.innerHTML = 'Error al cargar las obras. Por favor, verifica tu conexión.';
+            }
+        }
+
+        function formatPrice(price) {
+            return parseFloat(price).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        async function addToCart(obraId) {
+            try {
+                // Obtener datos de la obra
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${obraId}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                const obras = await response.json();
+                const obra = obras[0];
+
+                if (!obra) {
+                    alert('Obra no encontrada');
+                    return;
+                }
+
+                if (!obra.disponible) {
+                    alert('Esta obra ya no está disponible');
+                    return;
+                }
+
+                cart.addItem(obra);
+                cart.openCart();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar la obra al carrito');
+            }
+        }
+
+        // Cargar obras al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadArtworks();
+        });
+    </script>
+</body>
+</html>

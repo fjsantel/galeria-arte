@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administración | Galería de Arte</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- LOGIN -->
+    <div class="login-container" id="login-container">
+        <h1>Administración</h1>
+        <form class="login-form" id="login-form">
+            <input type="password" id="password-input" placeholder="Contraseña" required>
+            <button type="submit">INGRESAR</button>
+        </form>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="admin-container" id="admin-panel" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 3rem;">Panel de Administración</h1>
+            <button class="logout-btn" onclick="logout()">CERRAR SESIÓN</button>
+        </div>
+
+        <!-- AGREGAR OBRA -->
+        <div class="admin-section">
+            <h2>Agregar Nueva Obra</h2>
+            <form id="add-artwork-form">
+                <div class="form-group">
+                    <label for="titulo">Título</label>
+                    <input type="text" id="titulo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="artista">Artista</label>
+                    <input type="text" id="artista" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="anio">Año</label>
+                    <input type="number" id="anio" min="1900" max="2100" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tecnica">Técnica</label>
+                    <input type="text" id="tecnica" placeholder="Ej: Óleo sobre tela" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="precio">Precio (CLP)</label>
+                    <input type="number" id="precio" min="0" step="1000" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="imagen">Imagen</label>
+                    <input type="file" id="imagen" accept="image/*" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="disponible" checked>
+                        Disponible para venta
+                    </label>
+                </div>
+
+                <button type="submit" class="submit-btn">AGREGAR OBRA</button>
+            </form>
+        </div>
+
+        <!-- LISTA DE OBRAS -->
+        <div class="admin-section">
+            <h2>Obras Registradas</h2>
+            <div id="obras-list"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script>
+        // GESTIÓN DE SESIÓN
+        function checkAuth() {
+            const isAuthenticated = sessionStorage.getItem('adminAuth') === 'true';
+            if (isAuthenticated) {
+                showAdminPanel();
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password-input').value;
+
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('adminAuth', 'true');
+                showAdminPanel();
+            } else {
+                alert('Contraseña incorrecta');
+            }
+        });
+
+        function showAdminPanel() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            loadObras();
+        }
+
+        function logout() {
+            sessionStorage.removeItem('adminAuth');
+            location.reload();
+        }
+
+        // SUBIR IMAGEN A SUPABASE STORAGE
+        async function uploadImage(file) {
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${fileName}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: file
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al subir la imagen');
+                }
+
+                // Retornar URL pública
+                return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${fileName}`;
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        }
+
+        // AGREGAR OBRA
+        document.getElementById('add-artwork-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = e.target.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'SUBIENDO...';
+
+            try {
+                // Subir imagen
+                const imageFile = document.getElementById('imagen').files[0];
+                const imageUrl = await uploadImage(imageFile);
+
+                // Crear obra en la base de datos
+                const obra = {
+                    titulo: document.getElementById('titulo').value,
+                    artista: document.getElementById('artista').value,
+                    anio: parseInt(document.getElementById('anio').value),
+                    tecnica: document.getElementById('tecnica').value,
+                    precio: parseFloat(document.getElementById('precio').value),
+                    imagen_url: imageUrl,
+                    disponible: document.getElementById('disponible').checked
+                };
+
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(obra)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al guardar la obra');
+                }
+
+                alert('Obra agregada exitosamente');
+                e.target.reset();
+                loadObras();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar la obra: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'AGREGAR OBRA';
+            }
+        });
+
+        // CARGAR LISTA DE OBRAS
+        async function loadObras() {
+            const container = document.getElementById('obras-list');
+            container.innerHTML = '<p class="loading">Cargando obras...</p>';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?select=*&order=created_at.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar las obras');
+                }
+
+                const obras = await response.json();
+
+                if (obras.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #999;">No hay obras registradas.</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="obras-table">
+                        <thead>
+                            <tr>
+                                <th>Imagen</th>
+                                <th>Título</th>
+                                <th>Artista</th>
+                                <th>Año</th>
+                                <th>Precio</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${obras.map(obra => `
+                                <tr>
+                                    <td><img src="${obra.imagen_url}" alt="${obra.titulo}"></td>
+                                    <td>${obra.titulo}</td>
+                                    <td>${obra.artista}</td>
+                                    <td>${obra.anio}</td>
+                                    <td>$${formatPrice(obra.precio)}</td>
+                                    <td>${obra.disponible ? '✓ Disponible' : '✕ Vendida'}</td>
+                                    <td>
+                                        <button class="table-btn ${obra.disponible ? '' : 'sold'}"
+                                                onclick="toggleDisponibilidad('${obra.id}', ${!obra.disponible})">
+                                            ${obra.disponible ? 'Marcar Vendida' : 'Marcar Disponible'}
+                                        </button>
+                                        <button class="table-btn delete" onclick="deleteObra('${obra.id}')">
+                                            Eliminar
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = '<p style="color: red;">Error al cargar las obras.</p>';
+            }
+        }
+
+        // CAMBIAR DISPONIBILIDAD
+        async function toggleDisponibilidad(id, disponible) {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ disponible })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al actualizar la obra');
+                }
+
+                loadObras();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la obra');
+            }
+        }
+
+        // ELIMINAR OBRA
+        async function deleteObra(id) {
+            if (!confirm('¿Estás seguro de eliminar esta obra?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/obras?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la obra');
+                }
+
+                alert('Obra eliminada exitosamente');
+                loadObras();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la obra');
+            }
+        }
+
+        function formatPrice(price) {
+            return parseFloat(price).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+
+        // Verificar autenticación al cargar
+        checkAuth();
+    </script>
+</body>
+</html>
